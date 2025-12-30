@@ -421,9 +421,13 @@ export default {
   width: 100%;
   height: 100vh;
   overflow: scroll;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.5);
+  
   &::-webkit-scrollbar {
     display: none;
   }
+  
   @media (min-width: 900px) {
     left: 90px;
   }

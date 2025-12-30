@@ -173,7 +173,8 @@ export default {
           color: var(--text-primary);
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
           transition: background-color 0.3s ease, color 0.3s ease;
-          z-index: 100;
+          z-index: 10;
+          border-radius: 8px;
 
           li {
             cursor: pointer;
