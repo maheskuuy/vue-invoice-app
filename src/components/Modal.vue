@@ -48,8 +48,9 @@ export default {
     border-radius: 20px;
     padding: 48px 32px;
     max-width: 450px;
-    background-color: #252945;
-    color: #fff;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 
     p {
       text-align: center;

@@ -1,57 +1,61 @@
 <template>
-  <div v-if="invoicesLoaded">
-    <div v-if="!mobile" class="app flex flex-column">
+  <div v-if="invoicesLoaded" :class="{ 'dark-mode': darkMode, 'light-mode': !darkMode }">
+    <button class="theme-toggle-btn" @click="toggleDarkMode" :title="darkMode ? 'Light Mode' : 'Dark Mode'">
+      <img src="@/assets/icon-moon.svg" :alt="darkMode ? 'Light Mode' : 'Dark Mode'" />
+    </button>
+    <button class="profile-btn" @click="toggleProfile" title="Edit Profile">
+      <span class="profile-icon">#</span>
+    </button>
+    <div class="app flex flex-column">
       <Navigation />
       <div class="app-content flex flex-column">
         <Modal v-if="modalActive" />
         <transition name="invoice">
           <InvoiceModal v-if="invoiceModal" />
         </transition>
+        <transition name="profile">
+          <ProfileModal v-if="profileModal" />
+        </transition>
         <router-view />
       </div>
-    </div>
-    <div v-else class="mobile-message flex flex-column">
-      <h2>Sorry, this app is not supported on Mobile Devices</h2>
-      <p>To use this app, please use a computer or Tablet</p>
     </div>
   </div>
 </template>
 
 <script>
-import { mapState, mapActions } from "vuex";
+import { mapState, mapActions, mapMutations } from "vuex";
 import Navigation from "./components/Navigation";
 import InvoiceModal from "./components/InvoiceModal";
+import ProfileModal from "./components/ProfileModal";
 import Modal from "./components/Modal";
 export default {
   data() {
     return {
-      mobile: null,
     };
   },
   components: {
     Navigation,
     InvoiceModal,
+    ProfileModal,
     Modal,
   },
   created() {
     this.GET_INVOICES();
-    this.checkScreen();
-    window.addEventListener("resize", this.checkScreen);
   },
   methods: {
     ...mapActions(["GET_INVOICES"]),
+    ...mapMutations(["TOGGLE_DARK_MODE", "TOGGLE_PROFILE_MODAL"]),
 
-    checkScreen() {
-      const windowWidth = window.innerWidth;
-      if (windowWidth <= 750) {
-        this.mobile = true;
-        return;
-      }
-      this.mobile = false;
+    toggleDarkMode() {
+      this.TOGGLE_DARK_MODE();
+    },
+
+    toggleProfile() {
+      this.TOGGLE_PROFILE_MODAL();
     },
   },
   computed: {
-    ...mapState(["invoiceModal", "modalActive", "invoicesLoaded"]),
+    ...mapState(["invoiceModal", "modalActive", "invoicesLoaded", "darkMode", "profileModal"]),
   },
 };
 </script>
@@ -66,9 +70,133 @@ export default {
   font-family: "Poppins", sans-serif;
 }
 
+// Dark Mode Variables (Default)
+.dark-mode {
+  --bg-primary: #141625;
+  --bg-secondary: #1e2139;
+  --bg-tertiary: #252945;
+  --bg-hover: #2e2a47;
+  --text-primary: #fff;
+  --text-secondary: #888eb0;
+  --text-tertiary: #dfe3fa;
+  --border-color: #3a3f5b;
+  --input-bg: #1e2139;
+}
+
+// Light Mode Variables
+.light-mode {
+  --bg-primary: #f8f8fb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f5f5f9;
+  --bg-hover: #eeeff9;
+  --text-primary: #0c0e16;
+  --text-secondary: #7e88c3;
+  --text-tertiary: #252945;
+  --border-color: #dfe3fa;
+  --input-bg: #ffffff;
+}
+
+.theme-toggle-btn {
+  position: fixed;
+  top: 20px;
+  right: 80px;
+  z-index: 1000;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  img {
+    width: 22px;
+    height: 22px;
+    filter: brightness(0.8);
+    transition: filter 0.3s ease;
+  }
+
+  &:hover {
+    transform: scale(1.1);
+    
+    img {
+      filter: brightness(1.2);
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  @media (min-width: 900px) {
+    top: 30px;
+    right: 90px;
+  }
+}
+
+.profile-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  .profile-icon {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+  }
+
+  @media (min-width: 900px) {
+    top: 30px;
+    right: 30px;
+  }
+}
+
+// animated profile
+
+.profile-enter-active,
+.profile-leave-active {
+  transition: 0.5s ease all;
+}
+
+.profile-enter-from,
+.profile-leave-to {
+  transform: translateX(100%);
+}
+
+.profile-enter-active .profile-content,
+.profile-leave-active .profile-content {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-enter-from .profile-content,
+.profile-leave-to .profile-content {
+  transform: translateX(100%);
+}
+
 .app {
-  background-color: #141625;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  flex-direction: column;
+  
   @media (min-width: 900px) {
     flex-direction: row !important;
   }
@@ -77,6 +205,14 @@ export default {
     padding: 0 20px;
     flex: 1;
     position: relative;
+    
+    @media (max-width: 768px) {
+      padding: 0 16px;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 0 12px;
+    }
   }
 }
 
@@ -85,8 +221,9 @@ export default {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #141625;
-  color: #fff;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 
   p {
     margin-top: 16px;

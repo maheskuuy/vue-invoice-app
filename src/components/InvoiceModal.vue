@@ -7,7 +7,15 @@
 
       <!-- Bill From -->
       <div class="bill-from flex flex-column">
-        <h4>Bill From</h4>
+        <div class="flex" style="justify-content: space-between; align-items: center;">
+          <h4>Bill From</h4>
+          <button type="button" @click="openProfile" class="edit-profile-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            Edit Profile
+          </button>
+        </div>
         <div class="input flex flex-column">
           <label for="billerStreetAddress">Street Address</label>
           <input required type="text" id="billerStreetAddress" v-model="billerStreetAddress" />
@@ -82,6 +90,12 @@
           <label for="productDescription">Product Description</label>
           <input required type="text" id="productDescription" v-model="productDescription" />
         </div>
+        <div class="barcode-section flex flex-column">
+          <h3>Invoice Barcode</h3>
+          <div class="barcode-display flex flex-column">
+            <p class="barcode-info">Barcode will be generated when invoice is created</p>
+          </div>
+        </div>
         <div class="work-items">
           <h3>Item List</h3>
           <table class="item-list">
@@ -127,6 +141,8 @@ import db from "../firebase/firebaseInit";
 import Loading from "../components/Loading";
 import { mapActions, mapMutations, mapState } from "vuex";
 import { uid } from "uid";
+import JsBarcode from "jsbarcode";
+
 export default {
   name: "invoiceModal",
   data() {
@@ -154,6 +170,7 @@ export default {
       invoiceDraft: null,
       invoiceItemList: [],
       invoiceTotal: 0,
+      invoiceBarcode: null,
     };
   },
   components: {
@@ -164,6 +181,14 @@ export default {
     if (!this.editInvoice) {
       this.invoiceDateUnix = Date.now();
       this.invoiceDate = new Date(this.invoiceDateUnix).toLocaleDateString("en-us", this.dateOptions);
+      
+      // Auto-fill Bill From section from user profile
+      if (this.userProfile) {
+        this.billerStreetAddress = this.userProfile.streetAddress || null;
+        this.billerCity = this.userProfile.city || null;
+        this.billerZipCode = this.userProfile.zipCode || null;
+        this.billerCountry = this.userProfile.country || null;
+      }
     }
 
     if (this.editInvoice) {
@@ -192,7 +217,7 @@ export default {
     }
   },
   methods: {
-    ...mapMutations(["TOGGLE_INVOICE", "TOGGLE_MODAL", "TOGGLE_EDIT_INVOICE"]),
+    ...mapMutations(["TOGGLE_INVOICE", "TOGGLE_MODAL", "TOGGLE_EDIT_INVOICE", "TOGGLE_PROFILE_MODAL"]),
 
     ...mapActions(["UPDATE_INVOICE", "GET_INVOICES"]),
 
@@ -207,6 +232,10 @@ export default {
       if (this.editInvoice) {
         this.TOGGLE_EDIT_INVOICE();
       }
+    },
+
+    openProfile() {
+      this.TOGGLE_PROFILE_MODAL();
     },
 
     addNewInvoiceItem() {
@@ -238,6 +267,40 @@ export default {
       this.invoiceDraft = true;
     },
 
+    generateBarcode(invoiceId) {
+      return new Promise((resolve) => {
+        // Create container for barcode
+        const container = document.createElement("div");
+        container.id = "barcodeContainer";
+        container.style.display = "none";
+        document.body.appendChild(container);
+        
+        // Create SVG element
+        const svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        container.appendChild(svgElement);
+        
+        // Generate barcode with timeout to ensure render
+        setTimeout(() => {
+          JsBarcode(svgElement, invoiceId, {
+            format: "CODE128",
+            width: 2,
+            height: 100,
+            displayValue: true,
+            lineColor: "#000000",
+            margin: 5,
+          });
+          
+          // Get complete SVG HTML including all rendered elements
+          const barcodeHTML = container.innerHTML;
+          this.invoiceBarcode = barcodeHTML;
+          
+          // Clean up
+          document.body.removeChild(container);
+          resolve();
+        }, 100);
+      });
+    },
+
     async uploadInvoice() {
       if (this.invoiceItemList.length <= 0) {
         alert("Please ensure you filled out work items!");
@@ -248,10 +311,15 @@ export default {
 
       this.calInvoiceTotal();
 
+      const invoiceId = uid(6);
+      
+      // Generate barcode and wait for it to complete
+      await this.generateBarcode(invoiceId);
+
       const dataBase = db.collection("invoices").doc();
 
       await dataBase.set({
-        invoiceId: uid(6),
+        invoiceId: invoiceId,
         billerStreetAddress: this.billerStreetAddress,
         billerCity: this.billerCity,
         billerZipCode: this.billerZipCode,
@@ -273,6 +341,7 @@ export default {
         invoicePending: this.invoicePending,
         invoiceDraft: this.invoiceDraft,
         invoicePaid: null,
+        invoiceBarcode: this.invoiceBarcode,
       });
 
       this.loading = false;
@@ -332,7 +401,7 @@ export default {
     },
   },
   computed: {
-    ...mapState(["editInvoice", "currentInvoiceArray"]),
+    ...mapState(["editInvoice", "currentInvoiceArray", "userProfile"]),
   },
   watch: {
     paymentTerms() {
@@ -361,69 +430,201 @@ export default {
 
   .invoice-content {
     position: relative;
-    padding: 56px;
+    padding: 48px;
     max-width: 700px;
     width: 100%;
-    background-color: #141625;
-    color: #fff;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     box-shadow: 10px 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+
+    @media (max-width: 768px) {
+      padding: 32px;
+      max-width: 100%;
+      max-height: 95vh;
+    }
+
+    @media (max-width: 480px) {
+      padding: 16px;
+      max-height: 100vh;
+    }
 
     h1 {
-      margin-bottom: 48px;
-      color: #fff;
+      margin-bottom: 32px;
+      color: var(--text-primary);
+      font-size: 24px;
+
+      @media (max-width: 480px) {
+        font-size: 20px;
+        margin-bottom: 20px;
+      }
     }
 
     h3 {
-      margin-bottom: 16px;
-      font-size: 18px;
-      color: #777f98;
+      margin-bottom: 12px;
+      font-size: 16px;
+      color: var(--text-secondary);
+
+      @media (max-width: 480px) {
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
     }
 
     h4 {
       color: #7c5dfa;
       font-size: 12px;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
+
+      @media (max-width: 480px) {
+        margin-bottom: 12px;
+      }
     }
 
     // Bill To / Bill From
     .bill-to,
     .bill-from {
-      margin-bottom: 48px;
+      margin-bottom: 28px;
+
+      @media (max-width: 768px) {
+        margin-bottom: 20px;
+      }
+
+      @media (max-width: 480px) {
+        margin-bottom: 16px;
+      }
+
+      .edit-profile-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: none;
+        color: #7c5dfa;
+        font-size: 12px;
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+          background-color: var(--bg-hover);
+        }
+
+        svg {
+          width: 14px;
+          height: 14px;
+        }
+      }
 
       .location-details {
-        gap: 16px;
+        gap: 12px;
+        flex-wrap: wrap;
+
+        @media (max-width: 480px) {
+          flex-direction: column;
+          gap: 16px;
+        }
+
         div {
           flex: 1;
+          min-width: 120px;
+
+          @media (max-width: 480px) {
+            min-width: 100%;
+          }
         }
       }
     }
 
     // Invoice Work
-
     .invoice-work {
+      margin-bottom: 28px;
+
       .payment {
-        gap: 24px;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+
+        @media (max-width: 480px) {
+          flex-direction: column;
+        }
+
         div {
           flex: 1;
+          min-width: 140px;
+
+          @media (max-width: 480px) {
+            min-width: 100%;
+          }
+        }
+      }
+
+      .barcode-section {
+        margin: 16px 0;
+        padding: 12px;
+        border-radius: 6px;
+        background-color: var(--bg-tertiary);
+        transition: background-color 0.3s ease;
+        display: none;
+
+        h3 {
+          margin-bottom: 10px;
+          font-size: 13px;
+        }
+
+        .barcode-display {
+          align-items: center;
+          padding: 12px;
+          background-color: var(--input-bg);
+          border-radius: 6px;
+          border: 1px solid var(--border-color);
+          transition: background-color 0.3s ease, border-color 0.3s ease;
+          overflow-x: auto;
+          min-height: 50px;
+
+          .barcode-info {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-align: center;
+            font-style: italic;
+          }
         }
       }
 
       .work-items {
+        h3 {
+          margin-bottom: 12px;
+
+          @media (max-width: 480px) {
+            margin-bottom: 10px;
+          }
+        }
+
         .item-list {
           width: 100%;
+          overflow-x: auto;
+          margin-bottom: 12px;
 
-          // Item Table Styling
           .table-heading,
           .table-items {
-            gap: 16px;
-            font-size: 12px;
+            gap: 8px;
+            font-size: 11px;
+            margin-bottom: 8px;
+
+            @media (max-width: 480px) {
+              gap: 6px;
+              font-size: 10px;
+            }
 
             .item-name {
               flex-basis: 50%;
             }
 
             .qty {
-              flex-basis: 10%;
+              flex-basis: 15%;
             }
 
             .price {
@@ -431,80 +632,149 @@ export default {
             }
 
             .total {
-              flex-basis: 20%;
+              flex-basis: 15%;
               align-self: center;
             }
           }
 
           .table-heading {
-            margin-bottom: 16px;
-
             th {
               text-align: left;
+              font-size: 10px;
+              color: var(--text-secondary);
             }
           }
 
           .table-items {
             position: relative;
-            margin-bottom: 24px;
+
+            input {
+              width: 100%;
+              padding: 6px !important;
+              font-size: 11px !important;
+
+              @media (max-width: 480px) {
+                padding: 5px !important;
+                font-size: 10px !important;
+              }
+            }
+
+            .total {
+              font-weight: 600;
+              font-size: 11px;
+            }
 
             img {
               position: absolute;
-              top: 15px;
+              top: 6px;
               right: 0;
               width: 12px;
               height: 16px;
+              cursor: pointer;
             }
           }
         }
 
         .button {
-          color: #fff;
-          background-color: #252945;
+          color: var(--text-primary);
+          background-color: var(--bg-tertiary);
           align-items: center;
           justify-content: center;
           width: 100%;
+          transition: background-color 0.3s ease, color 0.3s ease;
+          padding: 10px !important;
+          margin: 12px 0 !important;
+          font-size: 12px;
+
+          @media (max-width: 480px) {
+            padding: 8px !important;
+            margin: 10px 0 !important;
+            font-size: 11px;
+          }
 
           img {
             margin-right: 4px;
+            width: 10px;
           }
         }
       }
     }
 
     .save {
-      margin-top: 60px;
+      margin-top: 40px;
+      gap: 10px;
+      flex-wrap: wrap;
+
+      @media (max-width: 768px) {
+        margin-top: 28px;
+      }
+
+      @media (max-width: 480px) {
+        flex-direction: column;
+        margin-top: 20px;
+        gap: 8px;
+      }
 
       div {
         flex: 1;
+        min-width: 120px;
+
+        @media (max-width: 480px) {
+          min-width: 100%;
+        }
       }
 
       .right {
         justify-content: flex-end;
+        gap: 8px;
+
+        @media (max-width: 480px) {
+          justify-content: stretch;
+          flex-direction: column;
+          gap: 8px;
+        }
       }
     }
   }
 
   .input {
-    margin-bottom: 24px;
+    margin-bottom: 14px;
+
+    @media (max-width: 480px) {
+      margin-bottom: 10px;
+    }
   }
 
   label {
     font-size: 12px;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
+    display: block;
+
+    @media (max-width: 480px) {
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
   }
 
   input,
   select {
     width: 100%;
-    background-color: #1e2139;
-    color: #fff;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
     border-radius: 4px;
-    padding: 12px 4px;
-    border: none;
+    padding: 10px 4px;
+    border: 1px solid var(--border-color);
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    font-size: 13px;
+
+    @media (max-width: 480px) {
+      padding: 8px 4px;
+      font-size: 12px;
+    }
 
     &:focus {
       outline: none;
+      border-color: #7c5dfa;
     }
   }
 }

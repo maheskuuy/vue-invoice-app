@@ -94,10 +94,21 @@ export default {
 
 <style lang="scss" scoped>
 .home {
-  color: #fff;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 
   .header {
     margin-bottom: 65px;
+    flex-wrap: wrap;
+    
+    @media (max-width: 768px) {
+      margin-bottom: 48px;
+      flex-direction: column;
+    }
+    
+    @media (max-width: 480px) {
+      margin-bottom: 32px;
+    }
 
     .left,
     .right {
@@ -107,6 +118,18 @@ export default {
     .right {
       justify-content: flex-end;
       align-items: center;
+      gap: 16px;
+      
+      @media (max-width: 768px) {
+        justify-content: space-between;
+        width: 100%;
+        gap: 12px;
+      }
+      
+      @media (max-width: 480px) {
+        flex-direction: column;
+        justify-content: stretch;
+      }
 
       .button,
       .filter {
@@ -114,6 +137,10 @@ export default {
 
         span {
           font-size: 12px;
+          
+          @media (max-width: 480px) {
+            font-size: 11px;
+          }
         }
       }
 
@@ -121,6 +148,15 @@ export default {
         position: relative;
         margin-right: 40px;
         cursor: pointer;
+        
+        @media (max-width: 768px) {
+          margin-right: 12px;
+        }
+        
+        @media (max-width: 480px) {
+          margin-right: 0;
+          width: 100%;
+        }
 
         img {
           margin-left: 12px;
@@ -133,17 +169,21 @@ export default {
           position: absolute;
           top: 25px;
           list-style: none;
-          background-color: #1e2139;
+          background-color: var(--bg-secondary);
+          color: var(--text-primary);
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          transition: background-color 0.3s ease, color 0.3s ease;
+          z-index: 100;
 
           li {
             cursor: pointer;
             font-size: 12px;
             padding: 10px 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
 
             &:hover {
-              color: #1e2139;
-              background-color: #fff;
+              color: var(--bg-secondary);
+              background-color: #7c5dfa;
             }
           }
         }
@@ -153,6 +193,11 @@ export default {
         padding: 8px 10px;
         background-color: #7c5dfa;
         border-radius: 40px;
+        
+        @media (max-width: 480px) {
+          width: 100%;
+          justify-content: center;
+        }
 
         .inner-button {
           margin-right: 8px;
@@ -173,15 +218,33 @@ export default {
   .empty {
     margin-top: 160px;
     align-items: center;
+    
+    @media (max-width: 768px) {
+      margin-top: 100px;
+    }
+    
+    @media (max-width: 480px) {
+      margin-top: 60px;
+    }
 
     img {
       width: 214px;
       height: 200px;
+      
+      @media (max-width: 480px) {
+        width: 150px;
+        height: 140px;
+      }
     }
 
     h3 {
       font-size: 20px;
       margin-top: 40px;
+      
+      @media (max-width: 480px) {
+        font-size: 18px;
+        margin-top: 24px;
+      }
     }
 
     p {
