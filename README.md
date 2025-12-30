@@ -266,8 +266,9 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-**Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
+**Mahes Kuu**
+- GitHub: [@maheskuuy](https://github.com/maheskuuy)
+- Email: mahesasuraa.9@gmail.com
 - Live Demo: [invoice-app-38ed4.web.app](https://invoice-app-38ed4.web.app)
 
 ## 🙏 Acknowledgments
@@ -279,7 +280,7 @@ This project is licensed under the MIT License.
 
 ## 📧 Support
 
-For support, email your.email@example.com or open an issue in the repository.
+For support, email mahesasuraa.9@gmail.com or open an issue in the repository.
 
 ---
 
